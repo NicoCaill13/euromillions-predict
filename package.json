@@ -3,18 +3,24 @@
   "name": "euromillions-analyzer",
   "version": "1.0.0",
   "scripts": {
-    "start": "node --loader ts-node/esm src/index.ts",
-    "generate": "node --loader ts-node/esm src/generate.ts"
-  },
-  "dependencies": {
-    "csv-parse": "^5.6.0",
-    "lodash": "^4.17.21",
-    "simple-statistics": "^7.8.8"
+    "train": "node dist/train.js data/loto",
+    "evaluate": "node dist/evaluate.js data/loto",
+    "predict": "node dist/predict.js data/loto",
+    "compare": "node dist/compare.js data/loto",
+    "update": "node dist/update_dataset.js data/loto"
   },
   "devDependencies": {
-    "@types/lodash": "^4.17.16",
-    "@types/node": "^22.14.1",
+    "@types/node": "^22.15.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0",
+    "csv-parse": "^5.6.0",
+    "ml-array-mean": "^1.1.6",
+    "ml-array-mode": "^1.1.5",
+    "ml-array-variance": "^1.1.8",
+    "ml-random-forest": "^2.1.0",
+    "simple-statistics": "^7.8.8"
   }
 }
