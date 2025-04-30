@@ -11,6 +11,8 @@ import {
     CHANCE_MAX,
     oneHot,
 } from './utils.js';
+import { makeFeatureVector } from './features.js';
+
 
 (async () => {
     /* ---------------------------------------------------------------------- */
@@ -59,7 +61,13 @@ import {
     const agg = Array(MAX_NUMBER).fill(0);
     for (let i = 0; i < TEST_SIZE; i++) {
         const win = draws.slice(trainDraws.length + i - LOOKBACK, trainDraws.length + i);
-        const inp = tf.tensor2d([win.flatMap(d => oneHot(d.numbers))]);
+
+        const vec = [
+            ...win.flatMap(d => oneHot(d.numbers)),   // 10×49
+            ...makeFeatureVector(win),                // +124 = 602
+        ];
+        const inp = tf.tensor2d([vec]);
+
         const [pNum] = model.predict(inp) as tf.Tensor<tf.Rank>[];
         pNum.dataSync().forEach((v, j) => (agg[j] += v));
         inp.dispose();

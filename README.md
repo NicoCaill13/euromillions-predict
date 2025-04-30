@@ -1,4 +1,4 @@
-# 🎰 Euromillions‑Predict — Guide d’utilisation
+# 🎰 Loto‑Predict — Guide d’utilisation
 
 > **Prerequis** : `npm install` pour récupérer les dépendances, puis `npx tsc` pour compiler tout le TypeScript vers `dist/`.
 >
@@ -10,7 +10,7 @@
 
 | Script | Commande | Description courte |
 |--------|----------|--------------------|
-| **update**   | `npm run update` *(+ `[path]`)* | Récupère le dernier tirage via l’API Opendatasoft et l’insère **en ligne 2** du fichier `lotoN.csv` ayant l’index le plus élevé (ou crée `loto.csv`). |
+| **update**   | `npm run update` *(+ `[path]`)* | Récupère le dernier tirage via l’API Opendatasoft et l’insère **en ligne 2** du fichier `loto4.csv`. |
 | **train**    | `npm run train` *(+ `[path]`)* | Entraîne le modèle bi‑tête (49 boules + 10 Chance) sur **tout** l’historique → sauvegarde dans `./model`. |
 | **predict**  | `npm run predict` *(+ `[path]`)* | Génère **5 grilles** (5 boules + Chance chacune) à partir du modèle courant. |
 | **compare**  | `npm run compare` *(+ `[path]`)* | Compare ces 5 grilles au **dernier tirage réel** (ligne 2 de `lotoN.csv`) ; affiche boules correctes & exactitude Chance. |
@@ -35,7 +35,7 @@ npm run predict
 
 ---
 
-## 🔄 Cycle hebdomadaire après chaque nouveau tirage
+## 🔄 Cycle après chaque nouveau tirage
 
 ```bash
 # 1. Ajouter le tirage du jour

@@ -108,6 +108,7 @@ export function buildDataset(draws: Draw[]) {
  *  Modèle bi‑tête
  * ----------------------------------------------------------------*/
 export function createModel(inputSize: number) {
+    const LOSS_WEIGHTS = { "num": 1, "chance": 3 }
     const inp = tf.input({ shape: [inputSize] });
     let x: tf.SymbolicTensor = tf.layers.dense({ units: UNITS_H1, activation: 'relu' }).apply(inp) as tf.SymbolicTensor;
     x = tf.layers.dropout({ rate: DROPOUT }).apply(x) as tf.SymbolicTensor;
@@ -117,10 +118,12 @@ export function createModel(inputSize: number) {
     const outCh = tf.layers.dense({ units: CHANCE_MAX, activation: 'softmax', name: 'chance' }).apply(x) as tf.SymbolicTensor;
 
     const model = tf.model({ inputs: inp, outputs: [outNum, outCh] });
-    model.compile({
+    const compileArgs = {
         loss: { num: 'binaryCrossentropy', chance: 'categoricalCrossentropy' },
+        LOSS_WEIGHTS,
         optimizer: tf.train.adam(LR0),
-    });
+    };
+    model.compile(compileArgs as any);
     return model;
 }
 

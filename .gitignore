@@ -2,3 +2,4 @@ node_modules
 weights.json
 dist/
 model/
+.env

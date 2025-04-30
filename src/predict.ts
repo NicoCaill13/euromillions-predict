@@ -9,7 +9,8 @@ import { totalScore } from './criteria/index.js';
 const MAX_SCORE = 200;
 const dir = process.argv[2] ?? 'data';
 const CANDIDATES = 1000000;      // nombre de grilles générées
-const KEEP = 5;        // nb de grilles finales affichées
+const KEEP = 5;
+const LAMBDA = Number(process.env.LAMBDA) || 1;
 export const MAX_SCORES: Record<string, number> = {
     sum: 30,
     parity: 20,
@@ -67,7 +68,7 @@ function weightedPick(weights: number[]): number {
 
         /* probabilité réseau pour cette grille */
         const pNN = nums.reduce((s, n) => s * pNum[n - 1], pChance[cIdx]);
-        const prob = pNN * phi;
+        const prob = pNN * Math.pow(phi, LAMBDA);
 
         pool.push({ nums, chance, score, prob });
     }
