@@ -1,2 +1,5 @@
 node_modules
-data/generated_grids.json
+weights.json
+dist/
+model/
+.env
