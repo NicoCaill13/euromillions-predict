@@ -1,24 +1,62 @@
-/*
- * utils.ts — version finale EXPORTED
- * --------------------------------------------------------------
- * Fournit :
- *   • loadDraws
- *   • oneHot / oneHotChance
- *   • buildDataset (concat 112+ dims venant de features.ts)
- *   • createModel (double‑tête boules / Chance)
- *   • trainOn, predictAll, randomBaseline
- *   • Toutes les constantes et le type Draw
- */
-
 import * as tf from '@tensorflow/tfjs-node';
 import * as fs from 'fs';
 import * as path from 'path';
 import { parse } from 'csv-parse/sync';
 import { makeFeatureVector } from './features.js';
 
-/* ------------------------------------------------------------------
- *  Config (env → Number)
- * ----------------------------------------------------------------*/
+export interface EvalResult {
+    name: string;
+    count: number;
+    avgHits: number;
+    baselineHits: number;
+    gain: number;
+    accChance: number;
+    baselineChance: number;
+    kl: number;
+}
+
+export async function evaluateDraws(
+    model: tf.LayersModel,
+    periodDraws: Draw[],
+    fullHistory: Draw[],
+    name: string
+): Promise<EvalResult> {
+    let hitsNums = 0;
+    let hitsChance = 0;
+    const agg = Array(MAX_NUMBER).fill(0);
+
+    for (let i = LOOKBACK; i < periodDraws.length; i++) {
+        const window = fullHistory.slice(i - LOOKBACK, i);
+        const { bestNums, bestChance } = predictAll(model, window);
+        const d = periodDraws[i];
+        hitsNums += bestNums.filter(n => d.numbers.includes(n)).length;
+        if (bestChance === d.chance) hitsChance++;
+        // KL accumulation
+        const vec = [...window.flatMap(w => oneHot(w.numbers)), ...makeFeatureVector(window)];
+        const inp = tf.tensor2d([vec]);
+        const [pNum] = model.predict(inp) as tf.Tensor[];
+        pNum.dataSync().forEach((v, idx) => { agg[idx] += v; });
+        inp.dispose(); pNum.dispose();
+    }
+
+    const N = periodDraws.length - LOOKBACK;
+    const avgHits = hitsNums / N;
+    const baselineHits = randomBaseline(periodDraws);
+    const gain = avgHits - baselineHits;
+    const accChance = hitsChance / N;
+    const baselineChance = 1 / CHANCE_MAX;
+
+    // KL divergence
+    const uniform = 1 / MAX_NUMBER;
+    const kl = agg.reduce((s, v) => {
+        const p = v / N;
+        return p ? s + p * Math.log(p / uniform) : s;
+    }, 0);
+
+    return { name, count: N, avgHits, baselineHits, gain, accChance, baselineChance, kl };
+}
+
+
 function envNum(key: string, def: number): number {
     const v = process.env[key];
     const n = v !== undefined ? Number(v) : def;
@@ -35,6 +73,7 @@ export const UNITS_H2 = envNum('UNITS_H2', 64);
 export const DROPOUT = envNum('DROPOUT', 0.3);
 export const EPOCHS = envNum('EPOCHS', 300);
 export const LR0 = envNum('LR0', 1e-3);
+export const LOSS_WEIGHTS = { "num": 1, "chance": 5 }
 
 /* ------------------------------------------------------------------
  *  Types & fichiers
@@ -70,9 +109,7 @@ export function loadDraws(dir = 'data'): Draw[] {
     return draws.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
-/* ------------------------------------------------------------------
- *  Encodage one‑hot
- * ----------------------------------------------------------------*/
+
 export const oneHot = (nums: number[]): number[] => {
     const v = Array(MAX_NUMBER).fill(0);
     nums.forEach((n: number) => { if (n >= 1 && n <= MAX_NUMBER) v[n - 1] = 1; });
@@ -108,7 +145,7 @@ export function buildDataset(draws: Draw[]) {
  *  Modèle bi‑tête
  * ----------------------------------------------------------------*/
 export function createModel(inputSize: number) {
-    const LOSS_WEIGHTS = { "num": 1, "chance": 3 }
+
     const inp = tf.input({ shape: [inputSize] });
     let x: tf.SymbolicTensor = tf.layers.dense({ units: UNITS_H1, activation: 'relu' }).apply(inp) as tf.SymbolicTensor;
     x = tf.layers.dropout({ rate: DROPOUT }).apply(x) as tf.SymbolicTensor;
@@ -196,4 +233,11 @@ export function predictProbs(model: tf.LayersModel, history: Draw[]) {
 
     inp.dispose(); tNum.dispose(); tCh.dispose();
     return { pNum, pChance };
+}
+
+
+export const yearsAgo = (n: number): Date => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - n);
+    return d;
 }
