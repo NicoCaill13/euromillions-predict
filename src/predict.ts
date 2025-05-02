@@ -1,4 +1,5 @@
 import * as tf from '@tensorflow/tfjs-node';
+import 'dotenv/config';
 import {
     loadDraws,
     LOOKBACK,
@@ -34,64 +35,75 @@ function weightedPick(weights: number[]): number {
     return weights.length - 1;
 }
 
+function jaccardDistance(a: number[], b: number[]): number {
+    const setA = new Set(a);
+    const setB = new Set(b);
+    let intersectionSize = 0;
+    setA.forEach(val => { if (setB.has(val)) intersectionSize++; });
+    const unionSize = new Set([...a, ...b]).size;
+    return 1 - intersectionSize / unionSize;
+}
 
 (async () => {
     const dir = process.argv[2] ?? 'data';
     const draws = loadDraws(dir);
     if (draws.length < LOOKBACK) throw new Error('Pas assez de tirages.');
 
-    /* probas réseau */
     const model = await tf.loadLayersModel('file://model/model.json');
     const { pNum, pChance } = predictProbs(model, draws.slice(-LOOKBACK));
 
     const pool: { nums: number[]; chance: number; score: number; prob: number }[] = [];
-
-    /* Monte-Carlo pondéré */
     while (pool.length < CANDIDATES) {
-        /* boules sans remise */
-        const w = pNum.slice();                 // copie des poids
+        const w = pNum.slice();
         const nums: number[] = [];
         for (let k = 0; k < NUMBERS_PER_DRAW; k++) {
             const idx = weightedPick(w);
             nums.push(idx + 1);
-            w[idx] = 0;                           // retire la boule
+            w[idx] = 0;
         }
         nums.sort((a, b) => a - b);
-
-        /* numéro Chance */
         const cIdx = weightedPick(pChance);
         const chance = cIdx + 1;
-
-        /* score critères (0-200) & facteur phi 0-1 */
         const score = totalScore(nums);
         const phi = score / MAX_SCORE;
-
-        /* probabilité réseau pour cette grille */
         const pNN = nums.reduce((s, n) => s * pNum[n - 1], pChance[cIdx]);
-        const prob = pNN * Math.pow(phi, LAMBDA);
-
+        const prob = pNN * phi;
         pool.push({ nums, chance, score, prob });
     }
 
+    // Sort by probability descending
     const sorted = pool.sort((a, b) => b.prob - a.prob);
     const best: typeof pool = [];
-    const MAX_OVERLAP = 2;
 
-    for (const cand of sorted) {
-        const similar = best.some(sel => {
-            const common = sel.nums.filter(n => cand.nums.includes(n)).length;
-            return common > MAX_OVERLAP || sel.chance === cand.chance;
+    // k-Center Greedy selection maximizing minimal Jaccard distance
+    while (best.length < KEEP && sorted.length > 0) {
+        if (best.length === 0) {
+            best.push(sorted.shift()!);
+            continue;
+        }
+        let selectedIndex = 0;
+        let maxMinDist = -Infinity;
+        sorted.forEach((cand, idx) => {
+            // compute minimal distance to current best
+            const minDist = best.reduce((minD, sel) => {
+                const d = jaccardDistance(sel.nums, cand.nums);
+                return d < minD ? d : minD;
+            }, Infinity);
+            if (minDist > maxMinDist) {
+                maxMinDist = minDist;
+                selectedIndex = idx;
+            }
         });
-        if (!similar) best.push(cand);
-        if (best.length === KEEP) break;
+        best.push(sorted.splice(selectedIndex, 1)[0]);
     }
 
-    console.log(`── ${best.length} grilles retenues sur ${CANDIDATES} `
-        + `(diversité ≤ ${MAX_OVERLAP} boules communes + Chance unique) ──`);
+    console.log(`── ${best.length} grilles retenues sur ${CANDIDATES} ` +
+        `(k-Center diversity) ──`);
     best.forEach((g, i) => {
         const pct = ((g.score / MAX_SCORE) * 100).toFixed(1);
-        console.log(`${i + 1})`, [...g.nums, g.chance].join('  '),
-            `| score ${g.score} (${pct} %)  P≈ ${g.prob.toExponential(2)}`);
+        console.log(
+            `${i + 1})`, [...g.nums, g.chance].join('  '),
+            `| score ${g.score} (${pct} %)  P≈ ${g.prob.toExponential(2)}`
+        );
     });
-
 })();

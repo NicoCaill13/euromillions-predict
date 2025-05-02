@@ -4,10 +4,12 @@
   "version": "1.0.0",
   "scripts": {
     "train": "node dist/train.js data/loto",
-    "evaluate": "node dist/evaluate.js data/loto",
     "predict": "node dist/predict.js data/loto",
     "compare": "node dist/compare.js data/loto",
-    "update": "node dist/update_dataset.js data/loto"
+    "validate": "node dist/validate.js data/loto",
+    "test": "node dist/test.js data/loto",
+    "update": "node dist/update_dataset.js data/loto",
+    "report": "node dist/report.js data/loto"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
@@ -17,6 +19,7 @@
   "dependencies": {
     "@tensorflow/tfjs-node": "^4.22.0",
     "csv-parse": "^5.6.0",
+    "dotenv": "^16.5.0",
     "ml-array-mean": "^1.1.6",
     "ml-array-mode": "^1.1.5",
     "ml-array-variance": "^1.1.8",

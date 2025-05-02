@@ -3,3 +3,5 @@ weights.json
 dist/
 model/
 .env
+report*.md
+report*.json
