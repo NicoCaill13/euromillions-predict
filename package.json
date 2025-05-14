@@ -3,16 +3,19 @@
   "name": "euromillions-analyzer",
   "version": "1.0.0",
   "scripts": {
-    "train": "node dist/train.js data/loto",
+    "train": "node dist/train.js",
     "predict": "node dist/predict.js data/loto",
-    "compare": "node dist/compare.js data/loto",
     "validate": "node dist/validate.js data/loto",
-    "test": "node dist/test.js data/loto",
     "update": "node dist/update_dataset.js data/loto",
-    "report": "node dist/report.js data/loto"
+    "convert": "node dist/convert.js",
+    "split": "node dist/split.js",
+    "build": "node dist/build-dataset.js",
+    "baseline": "node dist/baseline.js",
+    "threshold": "node dist/threshold-sweep.js",
+    "tuning": "node dist/tuning.js"
   },
   "devDependencies": {
-    "@types/node": "^22.15.3",
+    "@types/node": "^22.15.17",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },

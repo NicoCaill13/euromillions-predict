@@ -1,109 +1,108 @@
+#!/usr/bin/env ts-node
+
 import * as tf from '@tensorflow/tfjs-node';
-import 'dotenv/config';
-import {
-    loadDraws,
-    LOOKBACK,
-    predictProbs,
-    NUMBERS_PER_DRAW,
-} from './utils.js';
-import { totalScore } from './criteria/index.js';
-const MAX_SCORE = 200;
-const dir = process.argv[2] ?? 'data';
-const CANDIDATES = 1000000;      // nombre de grilles générées
-const KEEP = 5;
-const LAMBDA = Number(process.env.LAMBDA) || 1;
-export const MAX_SCORES: Record<string, number> = {
-    sum: 30,
-    parity: 20,
-    lowMidHigh: 25,
-    delta: 25,
-    gap: 100,
-    frequency: 150,
-    clusters: 20,
-    consecutives: 20,
-    dispersion: 25
-};
+import fs from 'fs/promises';
+import path from 'path';
 
+// Chemins
+const DATA_DIR = path.resolve(process.cwd(), 'data', 'loto');
+const DRAW_FILE = 'train_loto.json';         // tous les tirages
+const MODEL_DIR = path.join(DATA_DIR, 'model-lstm-final');
 
-function weightedPick(weights: number[]): number {
-    const tot = weights.reduce((a, b) => a + b, 0);
-    let r = Math.random() * tot;
-    for (let i = 0; i < weights.length; i++) {
-        r -= weights[i];
-        if (r <= 0) return i;
-    }
-    return weights.length - 1;
+const WINDOW_SIZE = 20;
+const LABEL_DIM = 49 + 10;  // 59
+const THRESHOLD = 0.10;     // seuil optimisé
+const NUM_GRIDS = 5;        // nombre de grilles à générer
+
+// Interfaces
+interface Draw { date: string; numbers: number[]; chance: number; }
+
+// Chargement des 20 derniers tirages
+async function loadLastDraws(): Promise<Draw[]> {
+    const raw = await fs.readFile(path.join(DATA_DIR, DRAW_FILE), 'utf-8');
+    const draws: Draw[] = JSON.parse(raw);
+    return draws.slice(-WINDOW_SIZE);
 }
 
-function jaccardDistance(a: number[], b: number[]): number {
-    const setA = new Set(a);
-    const setB = new Set(b);
-    let intersectionSize = 0;
-    setA.forEach(val => { if (setB.has(val)) intersectionSize++; });
-    const unionSize = new Set([...a, ...b]).size;
-    return 1 - intersectionSize / unionSize;
+// Construction de la séquence 3D
+function buildSequence(window: Draw[]): number[][][] {
+    return [window.map(draw => {
+        const lbl = Array(LABEL_DIM).fill(0);
+        draw.numbers.forEach(n => { if (n >= 1 && n <= 49) lbl[n - 1] = 1; });
+        if (draw.chance >= 1 && draw.chance <= 10) lbl[49 + draw.chance - 1] = 1;
+        return lbl;
+    })];
+}
+
+// Échantillonnage pondéré sans remise
+function weightedSampleWithoutReplacement<T>(items: T[], weights: number[], k: number): T[] {
+    const result: T[] = [];
+    const availItems = items.slice();
+    const availWeights = weights.slice();
+    for (let i = 0; i < k && availItems.length > 0; i++) {
+        const sum = availWeights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * sum;
+        let idx = 0;
+        while (r > availWeights[idx]) {
+            r -= availWeights[idx];
+            idx++;
+        }
+        result.push(availItems[idx]);
+        // retirer
+        availItems.splice(idx, 1);
+        availWeights.splice(idx, 1);
+    }
+    return result;
+}
+
+// Échantillonnage pondéré 1 élément
+function weightedSampleOne<T>(items: T[], weights: number[]): T | null {
+    const sum = weights.reduce((a, b) => a + b, 0);
+    if (sum === 0) return null;
+    let r = Math.random() * sum;
+    for (let i = 0; i < items.length; i++) {
+        if (r < weights[i]) return items[i];
+        r -= weights[i];
+    }
+    return items[items.length - 1];
 }
 
 (async () => {
-    const dir = process.argv[2] ?? 'data';
-    const draws = loadDraws(dir);
-    if (draws.length < LOOKBACK) throw new Error('Pas assez de tirages.');
-
-    const model = await tf.loadLayersModel('file://model/model.json');
-    const { pNum, pChance } = predictProbs(model, draws.slice(-LOOKBACK));
-
-    const pool: { nums: number[]; chance: number; score: number; prob: number }[] = [];
-    while (pool.length < CANDIDATES) {
-        const w = pNum.slice();
-        const nums: number[] = [];
-        for (let k = 0; k < NUMBERS_PER_DRAW; k++) {
-            const idx = weightedPick(w);
-            nums.push(idx + 1);
-            w[idx] = 0;
-        }
-        nums.sort((a, b) => a - b);
-        const cIdx = weightedPick(pChance);
-        const chance = cIdx + 1;
-        const score = totalScore(nums);
-        const phi = score / MAX_SCORE;
-        const pNN = nums.reduce((s, n) => s * pNum[n - 1], pChance[cIdx]);
-        const prob = pNN * phi;
-        pool.push({ nums, chance, score, prob });
+    console.log('🔄 Chargement des 20 derniers tirages…');
+    const last20 = await loadLastDraws();
+    if (last20.length < WINDOW_SIZE) {
+        console.error(`Il faut au moins ${WINDOW_SIZE} tirages pour prédire.`);
+        process.exit(1);
     }
 
-    // Sort by probability descending
-    const sorted = pool.sort((a, b) => b.prob - a.prob);
-    const best: typeof pool = [];
+    console.log('📐 Construction de la séquence…');
+    const seq3d = buildSequence(last20);              // [1,20,59]
+    const input = tf.tensor3d(seq3d, [1, WINDOW_SIZE, LABEL_DIM]);
 
-    // k-Center Greedy selection maximizing minimal Jaccard distance
-    while (best.length < KEEP && sorted.length > 0) {
-        if (best.length === 0) {
-            best.push(sorted.shift()!);
-            continue;
-        }
-        let selectedIndex = 0;
-        let maxMinDist = -Infinity;
-        sorted.forEach((cand, idx) => {
-            // compute minimal distance to current best
-            const minDist = best.reduce((minD, sel) => {
-                const d = jaccardDistance(sel.nums, cand.nums);
-                return d < minD ? d : minD;
-            }, Infinity);
-            if (minDist > maxMinDist) {
-                maxMinDist = minDist;
-                selectedIndex = idx;
-            }
-        });
-        best.push(sorted.splice(selectedIndex, 1)[0]);
+    console.log('🔍 Chargement du modèle…');
+    const model = await tf.loadLayersModel(`file://${MODEL_DIR}/model.json`);
+
+    console.log('🔢 Prédiction des probabilités…');
+    const probs = (model.predict(input) as tf.Tensor2D).arraySync()[0];  // [59]
+
+    // Séparer boules et chance
+    const ballProbs = probs.slice(0, 49);
+    const chanceProbs = probs.slice(49);
+    const ballsIdx = Array.from({ length: 49 }, (_, i) => i + 1);
+    const chanceIdx = Array.from({ length: 10 }, (_, i) => i + 1);
+
+    console.log(`🎯 Génération de ${NUM_GRIDS} grilles…`);
+    for (let g = 1; g <= NUM_GRIDS; g++) {
+        const balls = weightedSampleWithoutReplacement(ballsIdx, ballProbs, 5);
+        const chance = weightedSampleOne(chanceIdx, chanceProbs);
+
+        console.log(`
+Grille #${g}:`);
+        console.log(`• Boules : ${balls.join(', ')}`);
+        console.log(`• Chance : ${chance ?? '(aucune)'}`);
     }
 
-    console.log(`── ${best.length} grilles retenues sur ${CANDIDATES} ` +
-        `(k-Center diversity) ──`);
-    best.forEach((g, i) => {
-        const pct = ((g.score / MAX_SCORE) * 100).toFixed(1);
-        console.log(
-            `${i + 1})`, [...g.nums, g.chance].join('  '),
-            `| score ${g.score} (${pct} %)  P≈ ${g.prob.toExponential(2)}`
-        );
-    });
+    // Cleanup
+    input.dispose();
+    tf.disposeVariables();
 })();

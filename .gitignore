@@ -5,3 +5,6 @@ model/
 .env
 report*.md
 report*.json
+**/loto/**/*.json
+**/loto/**/*.bin
+**/loto/**/*.v2

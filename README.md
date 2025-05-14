@@ -1,84 +1,125 @@
-# 🎰 Loto‑Predict — Guide d’utilisation
+# Loto Predictor (Deep Learning)
 
-> **Prerequis** : `npm install` pour récupérer les dépendances, puis `npx tsc` pour compiler tout le TypeScript vers `dist/`.
+Ce projet utilise **Node.js**, **TypeScript** et **TensorFlow\.js** pour prédire les tirages du Loto français via un modèle **LSTM**. Il couvre l'intégralité du pipeline : extraction et préparation des données, entraînement, évaluation et génération de grilles.
+
+---
+
+## 🔧 Prérequis
+
+* **Node.js** v14 ou supérieur
+* **npm**
+* **TypeScript** et **ts-node** (en développement)
+
+```bash
+npm install --save-dev typescript ts-node @types/node
+```
+
+* (Optionnel) **TensorBoard** pour visualiser les logs :
+
+```bash
+npm install --global @tensorflow/tfjs-node-gpu
+```
+
+---
+
+## ⚙️ Installation & build
+
+1. Cloner le dépôt et installer les dépendances :
+
+   ```bash
+   git clone <url-du-repo>
+   cd euromillions-predict
+   npm install
+   ```
+
+2. Compiler le TypeScript (optionnel) :
+
+   ```bash
+   npx tsc
+   ```
+
+   Cela génère les fichiers JavaScript dans le dossier `dist/`.
+
+---
+
+## 🚀 Pipeline de production
+
+| Étape                                        | Commande           | Script appelé               | Résultat                                                                       |
+| -------------------------------------------- | ------------------ | --------------------------- | ------------------------------------------------------------------------------ |
+| 1. Génération du dataset séquentiel          | `npm run build`    | `dist/build-dataset.js`     | `data/loto/x_train_seq.json`, `y_train.json`, `x_test_seq.json`, `y_test.json` |
+| 2. Entraînement du modèle final (LSTM)       | `npm run train`    | `dist/train.js`             | `data/loto/model-lstm-final/`                                                  |
+| 3. Évaluation finale (loss & F1)             | `npm run validate` | `dist/validate.js`          | Loss, binaryAccuracy, Precision, Recall, F1, Exact Match Ratio                 |
+| 4. Prédiction du prochain tirage (5 grilles) | `npm run predict`  | `dist/predict.js data/loto` | Affiche 5 grilles pondérées                                                    |
+
+> **Note** : les commandes ci-dessus appellent :
 >
-> Le dossier des CSV est par défaut `data/` (modifiable en passant un argument à chaque script).
+> * `src/build-dataset.ts` → `dist/build-dataset.js`
+> * `src/train-lstm-final.ts` → `dist/train.js`
+> * `src/evaluate-lstm-final.ts` → `dist/validate.js`
+> * `src/predict-next-draw.ts` → `dist/predict.js`
 
 ---
 
-## 🚀 Commandes NPM disponibles
+## 🧪 Outils d’analyse & tuning
 
-| Script | Commande | Description courte |
-|--------|----------|--------------------|
-| **update**   | `npm run update` *(+ `[path]`)* | Récupère le dernier tirage via l’API Opendatasoft et l’insère **en ligne 2** du fichier `loto4.csv`. |
-| **train**    | `npm run train` *(+ `[path]`)* | Entraîne le modèle bi‑tête (49 boules + 10 Chance) sur **tout** l’historique → sauvegarde dans `./model`. |
-| **predict**  | `npm run predict` *(+ `[path]`)* | Génère **5 grilles** (5 boules + Chance chacune) à partir du modèle courant. |
-| **compare**  | `npm run compare` *(+ `[path]`)* | Compare ces 5 grilles au **dernier tirage réel** (ligne 2 de `lotoN.csv`) ; affiche boules correctes & exactitude Chance. |
-| **evaluate** | `npm run evaluate` *(+ `[path]`)* | Audit complet : split 50 derniers tirages test → hits moyens, baseline hasard, précision Chance, divergence KL, export `weights.json`. |
+Ces scripts **ne** font **pas** partie du pipeline de production, mais servent au benchmark et à l’optimisation :
 
-> **Note** : tous les scripts acceptent un argument optionnel `path` pour spécifier un dossier différent de `data/` :
-> ```bash
-> npm run train -- archives
-> ```
+| Script                       | Commande            | Objectif                                                               |
+| ---------------------------- | ------------------- | ---------------------------------------------------------------------- |
+| Baseline fréquentiel         | `npm run baseline`  | Score F1 d’une règle top-5 boules + top-1 chance (20 derniers tirages) |
+| Sweep de seuil (threshold)   | `npm run threshold` | Recherche du seuil optimal (0.1–0.85) maximisant le F1 multi-label     |
+| Grid-search hyperparams LSTM | `npm run tuning`    | Teste combos (LSTM units, Dropout, LR) et affiche le top-3 par F1      |
 
 ---
 
-## 🟢 Première utilisation
+## 📂 Structure du projet
 
-```bash
-# 1. Entraîner le réseau sur tout l’historique
-npm run train
-
-# 2. Obtenir 5 grilles pour le prochain tirage
-npm run predict
 ```
-
----
-
-## 🔄 Cycle après chaque nouveau tirage
-
-```bash
-# 1. Ajouter le tirage du jour
-npm run update
-
-# 2. Ré‑entraîner le modèle avec l’historique à jour
-npm run train
-
-# 3. Vérifier la performance sur ce tirage tout juste ajouté
-npm run compare
-
-# 4. Générer 5 nouvelles grilles à jouer
-npm run predict
-```
-
-*(Astuce : tout exécuter d’un seul trait :)*
-```bash
-npm run update && npm run train && npm run compare && npm run predict
+euromillions-predict/
+├─ data/
+│  └─ loto/
+│     ├─ train_loto.json
+│     ├─ test_loto.json
+│     ├─ x_train_seq.json
+│     ├─ y_train.json
+│     ├─ x_test_seq.json
+│     ├─ y_test.json
+│     └─ model-lstm-final/
+├─ src/
+│  ├─ build-dataset.ts
+│  ├─ train-lstm-final.ts
+│  ├─ evaluate-lstm-final.ts
+│  ├─ predict-next-draw.ts
+│  ├─ baseline.ts
+│  ├─ threshold-sweep.ts
+│  └─ tune-lstm.ts
+├─ dist/                  # JavaScript compilé
+├─ package.json
+├─ tsconfig.json
+└─ README.md              # (ce fichier)
 ```
 
 ---
 
-## 📊 Audit ponctuel
+## 📈 Monitoring & automatisation
 
-```bash
-# Quand vous le souhaitez (p. ex. une fois par mois)
-npm run evaluate
-```
+* **TensorBoard** :
 
-Affiche :
-* moyenne de boules correctes / tirage,
-* baseline Monte‑Carlo (hasard),
-* précision sur le numéro Chance,
-* divergence KL,
-* export des poids du dernier layer → `weights.json` (pour une heat‑map dans Python ou autre).
+  ```bash
+  tensorboard --logdir data/loto/logs-lstm-final
+  ```
+
+* **Automatisation** (cron / CI) :
+
+  * Exécuter périodiquement (mensuel ou après chaque tirage) :
+
+    ```bash
+    npm run build && npm run train && npm run validate
+    ```
+  * Mettre en place des notifications si la performance (F1) chute.
 
 ---
 
-## 📝 Récapitulatif rapide
+## 📜 Licence
 
-```
-Première fois :  train  → predict
-Routine :       update → train → compare → predict
-Audit :          evaluate (optionnel)
-```
-
+MIT © \[Votre Nom ou Organisation]

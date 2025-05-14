@@ -10,7 +10,7 @@ import path from 'path';
 import fetch from 'node-fetch';
 
 const DATA_DIR = process.argv[2] ?? 'data';
-const API_URL = 'https://data.opendatasoft.com/api/explore/v2.1/catalog/datasets/resultats-loto-2019-a-aujourd-hui@agrall/records?limit=1';
+const API_URL = 'https://data.opendatasoft.com/api/explore/v2.1/catalog/datasets/resultats-loto-2019-a-aujourd-hui@agrall/records?limit=3';
 
 interface ApiRow {
     date_de_tirage: string; // YYYY-MM-DD
