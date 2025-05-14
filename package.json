@@ -1,25 +1,40 @@
 {
-  "type": "module",
-  "name": "euromillions-analyzer",
-  "version": "1.0.0",
+  "name": "test-toto",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "private": true,
+  "license": "UNLICENSED",
   "scripts": {
-    "update": "node dist/update_dataset.js data/loto",
-    "convert": "node dist/convert.js",
-    "split": "node dist/split.js",
-    "build": "node dist/build-dataset.js",
-    "train": "node dist/train.js",
-    "validate": "node dist/validate.js data/loto",
-    "threshold": "node dist/threshold-sweep.js",
-    "predict": "node dist/predict.js data/loto",
-    "baseline": "node dist/baseline.js",
-    "tuning": "node dist/tuning.js"
-  },
-  "devDependencies": {
-    "@types/node": "^22.15.17",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "update": "node dist/deep-learning/update_dataset.js",
+    "convert": "node dist/deep-learning/convert.js",
+    "split": "node dist/deep-learning/split.js",
+    "build-data": "node dist/deep-learning/build-dataset.js",
+    "train": "node dist/deep-learning/train.js",
+    "validate": "node dist/deep-learning/validate.js",
+    "threshold": "node dist/deep-learning/threshold-sweep.js",
+    "predict": "node dist/deep-learning/predict.js",
+    "baseline": "node dist/deep-learning/baseline.js",
+    "tuning": "node dist/deep-learning/tuning.js"
   },
   "dependencies": {
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/platform-express": "^11.0.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
     "@tensorflow/tfjs-node": "^4.22.0",
     "csv-parse": "^5.6.0",
     "dotenv": "^16.5.0",
@@ -28,5 +43,49 @@
     "ml-array-variance": "^1.1.8",
     "ml-random-forest": "^2.1.0",
     "simple-statistics": "^7.8.8"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.18.0",
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.1",
+    "@swc/cli": "^0.6.0",
+    "@swc/core": "^1.10.7",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.7",
+    "@types/supertest": "^6.0.2",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "globals": "^16.0.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.4.2",
+    "source-map-support": "^0.5.21",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
   }
 }
