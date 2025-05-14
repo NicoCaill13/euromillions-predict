@@ -88,13 +88,14 @@ euromillions-predict/
 │     ├─ y_test.json
 │     └─ model-lstm-final/
 ├─ src/
-│  ├─ build-dataset.ts
-│  ├─ train-lstm-final.ts
-│  ├─ evaluate-lstm-final.ts
-│  ├─ predict-next-draw.ts
-│  ├─ baseline.ts
-│  ├─ threshold-sweep.ts
-│  └─ tune-lstm.ts
+|  └─ deep-learning/
+│     ├─ build-dataset.ts
+│     ├─ train-lstm-final.ts
+│     ├─ evaluate-lstm-final.ts
+│     ├─ predict-next-draw.ts
+│     ├─ baseline.ts
+│     ├─ threshold-sweep.ts
+│     └─ tune-lstm.ts
 ├─ dist/                  
 ├─ package.json
 ├─ tsconfig.json
