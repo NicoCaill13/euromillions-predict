@@ -46,13 +46,13 @@ npm install --global @tensorflow/tfjs-node-gpu
 
 | Étape                                        | Commande           | Script appelé               | Résultat                                                                                                     |
 | -------------------------------------------- | ------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| 0. Conversion CSV → JSON                     | `npm run convert`  | `dist/convert.js`           | `data/loto/combined.json`                                                                                    |
-| 1. Split train/test                          | `npm run split`    | `dist/split.js`             | `data/loto/train_loto.json`, `data/loto/test_loto.json`                                                      |
-| 2. Génération du dataset séquentiel          | `npm run build`    | `dist/build-dataset.js`     | `data/loto/x_train_seq.json`, `data/loto/y_train.json`, `data/loto/x_test_seq.json`, `data/loto/y_test.json` |
-| Génération du dataset séquentiel             | `npm run build`    | `dist/build-dataset.js`     | `x_train_seq.json`, `y_train.json`, `x_test_seq.json`, `y_test.json`                                         |
-| 2. Entraînement du modèle final (LSTM)       | `npm run train`    | `dist/train.js`             | `data/loto/model-lstm-final/`                                                                                |
-| 3. Évaluation finale (loss & F1)             | `npm run validate` | `dist/validate.js`          | Loss, binaryAccuracy, Precision, Recall, F1, Exact Match Ratio                                               |
-| 4. Prédiction du prochain tirage (5 grilles) | `npm run predict`  | `dist/predict.js data/loto` | Affiche 5 grilles pondérées                                                                                  |
+| 0. Conversion CSV → JSON                     | `npm run convert`  | `dist/deep-learning/convert.js`           | `data/loto/combined.json`                                                                                    |
+| 1. Split train/test                          | `npm run split`    | `dist/deep-learning/split.js`             | `data/loto/train_loto.json`, `data/loto/test_loto.json`                                                      |
+| 2. Génération du dataset séquentiel          | `npm run build`    | `dist/deep-learning/build-dataset.js`     | `data/loto/x_train_seq.json`, `data/loto/y_train.json`, `data/loto/x_test_seq.json`, `data/loto/y_test.json` |
+| Génération du dataset séquentiel             | `npm run build`    | `dist/deep-learning/build-dataset.js`     | `x_train_seq.json`, `y_train.json`, `x_test_seq.json`, `y_test.json`                                         |
+| 2. Entraînement du modèle final (LSTM)       | `npm run train`    | `dist/deep-learning/train.js`             | `data/loto/model-lstm-final/`                                                                                |
+| 3. Évaluation finale (loss & F1)             | `npm run validate` | `dist/deep-learning/validate.js`          | Loss, binaryAccuracy, Precision, Recall, F1, Exact Match Ratio                                               |
+| 4. Prédiction du prochain tirage (5 grilles) | `npm run predict`  | `dist/deep-learning/predict.js` | Affiche 5 grilles pondérées                                                                                  |
 
 \-------------------------------------------------|-------------------------|----------------------------|-----------------------------------------------------------------|
 \| 1. Génération du dataset séquentiel             | `npm run build`         | `dist/build-dataset.js`    | `data/loto/x_train_seq.json`, `y_train.json`, `x_test_seq.json`, `y_test.json` |
